@@ -146,7 +146,10 @@ async fn main() {
             let (row, col) = xy2rowcol(x, y);
             match tile_selected {
                 None => {
-                    if board_state[row][col] == player_turn {
+                    if (player_turn == 1 && board_state[row][col] == 1)
+                        || (player_turn == 2
+                            && (board_state[row][col] == 2 || board_state[row][col] == 3))
+                    {
                         board_state[row][col] *= 10;
                         // add legal moves to the set
                         tile_selected = Some((row, col));
