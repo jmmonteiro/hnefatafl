@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
 
@@ -46,7 +48,7 @@ fn draw_piece(x: f32, y: f32, color: Color) {
     );
 }
 
-fn draw_board(board_state: &[[i8; 11]; 11]) {
+fn draw_board(board_state: &[[u8; 11]; 11], legal_moves: &HashSet<(usize, usize)>) {
     (0..11).for_each(|r| {
         (0..11).for_each(|c| {
             let (x, y) = rowcol2xy(r, c);
@@ -66,7 +68,9 @@ fn draw_board(board_state: &[[i8; 11]; 11]) {
             );
             if board_state[r][c] >= 10 {
                 draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, GOLD);
-            } else if board_state[r][c] < 0 {
+            }
+            for (r, c) in legal_moves {
+                let (x, y) = rowcol2xy(*r, *c);
                 draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, LIME);
             }
             match board_state[r][c] {
@@ -92,7 +96,7 @@ async fn main() {
     // attacker: 1
     // defender: 2
     // king: 3
-    let mut board_state: [[i8; 11]; 11] = [
+    let mut board_state: [[u8; 11]; 11] = [
         [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
         [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -106,14 +110,15 @@ async fn main() {
         [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
     ];
 
-    let mut player_turn: i8 = 1;
+    let mut player_turn: u8 = 1;
     let mut tile_selected = false;
+    let mut legal_moves: HashSet<(usize, usize)> = HashSet::new();
 
     loop {
         clear_background(BLACK);
 
         // Draw board
-        draw_board(&board_state);
+        draw_board(&board_state, &legal_moves);
 
         // Get input
         if is_mouse_button_pressed(MouseButton::Left) {
@@ -123,10 +128,25 @@ async fn main() {
                 if !tile_selected && board_state[row][col] < 10 {
                     board_state[row][col] *= 10;
                     tile_selected = true;
+
+                    // add legal moves to the set
+                    for i in (0..row).rev().take_while(|&i| board_state[i][col] == 0) {
+                        legal_moves.insert((i, col));
+                    }
+                    for i in (row + 1..11).take_while(|&i| board_state[i][col] == 0) {
+                        legal_moves.insert((i, col));
+                    }
+                    for i in (0..col).rev().take_while(|&i| board_state[row][i] == 0) {
+                        legal_moves.insert((row, i));
+                    }
+                    for i in (col + 1..11).take_while(|&i| board_state[row][i] == 0) {
+                        legal_moves.insert((row, i));
+                    }
                 } else {
                     if board_state[row][col] >= 10 {
                         board_state[row][col] /= 10;
                         tile_selected = false;
+                        legal_moves.clear();
                     }
                 }
             }
