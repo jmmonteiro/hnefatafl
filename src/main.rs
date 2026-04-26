@@ -89,6 +89,26 @@ fn draw_board(board_state: &[[u8; 11]; 11], legal_moves: &HashSet<(usize, usize)
     });
 }
 
+fn add_legal_moves(
+    row: usize,
+    col: usize,
+    board_state: &[[u8; 11]; 11],
+    legal_moves: &mut HashSet<(usize, usize)>,
+) {
+    for i in (0..row).rev().take_while(|&i| board_state[i][col] == 0) {
+        legal_moves.insert((i, col));
+    }
+    for i in (row + 1..11).take_while(|&i| board_state[i][col] == 0) {
+        legal_moves.insert((i, col));
+    }
+    for i in (0..col).rev().take_while(|&i| board_state[row][i] == 0) {
+        legal_moves.insert((row, i));
+    }
+    for i in (col + 1..11).take_while(|&i| board_state[row][i] == 0) {
+        legal_moves.insert((row, i));
+    }
+}
+
 #[macroquad::main(window_conf)]
 async fn main() {
     // States:
@@ -111,7 +131,7 @@ async fn main() {
     ];
 
     let mut player_turn: u8 = 1;
-    let mut tile_selected = false;
+    let mut tile_selected: Option<(usize, usize)> = None;
     let mut legal_moves: HashSet<(usize, usize)> = HashSet::new();
 
     loop {
@@ -124,28 +144,30 @@ async fn main() {
         if is_mouse_button_pressed(MouseButton::Left) {
             let (x, y) = mouse_position();
             let (row, col) = xy2rowcol(x, y);
-            if board_state[row][col] != 0 {
-                if !tile_selected && board_state[row][col] < 10 {
-                    board_state[row][col] *= 10;
-                    tile_selected = true;
-
-                    // add legal moves to the set
-                    for i in (0..row).rev().take_while(|&i| board_state[i][col] == 0) {
-                        legal_moves.insert((i, col));
+            match tile_selected {
+                None => {
+                    if board_state[row][col] == player_turn {
+                        board_state[row][col] *= 10;
+                        // add legal moves to the set
+                        tile_selected = Some((row, col));
+                        add_legal_moves(row, col, &board_state, &mut legal_moves);
                     }
-                    for i in (row + 1..11).take_while(|&i| board_state[i][col] == 0) {
-                        legal_moves.insert((i, col));
-                    }
-                    for i in (0..col).rev().take_while(|&i| board_state[row][i] == 0) {
-                        legal_moves.insert((row, i));
-                    }
-                    for i in (col + 1..11).take_while(|&i| board_state[row][i] == 0) {
-                        legal_moves.insert((row, i));
-                    }
-                } else {
-                    if board_state[row][col] >= 10 {
+                }
+                Some((player_row, player_col)) => {
+                    if legal_moves.contains(&(row, col)) {
+                        //  Move piece
+                        board_state[player_row][player_col] = 0;
+                        board_state[row][col] = player_turn;
+                        tile_selected = None;
+                        legal_moves.clear();
+                        if player_turn == 1 {
+                            player_turn = 2;
+                        } else {
+                            player_turn = 1;
+                        }
+                    } else if (row, col) == (player_row, player_col) {
                         board_state[row][col] /= 10;
-                        tile_selected = false;
+                        tile_selected = None;
                         legal_moves.clear();
                     }
                 }
