@@ -156,8 +156,8 @@ async fn main() {
                 Some((player_row, player_col)) => {
                     if legal_moves.contains(&(row, col)) {
                         //  Move piece
+                        board_state[row][col] = board_state[player_row][player_col] / 10;
                         board_state[player_row][player_col] = 0;
-                        board_state[row][col] = player_turn;
                         tile_selected = None;
                         legal_moves.clear();
                         if player_turn == 1 {
