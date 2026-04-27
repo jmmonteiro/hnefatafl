@@ -60,6 +60,7 @@ fn draw_board(board_state: &[[u8; 11]; 11], legal_moves: &HashSet<(usize, usize)
                 if (r == 0 && (c == 0 || c == 10))
                     || (c == 0 && (r == 0 || r == 10))
                     || (r == 10 && c == 10)
+                    || (r == 5 && c == 5)
                 {
                     GRAY
                 } else {
