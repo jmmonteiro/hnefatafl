@@ -3,7 +3,7 @@ use std::collections::HashSet;
 
 use crate::cons::TILE_SIZE;
 
-enum SpecialSquare {
+pub enum SpecialSquare {
     Escape,
     Throne,
 }

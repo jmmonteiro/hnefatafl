@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
-use tafl::board::{self, Board, King, Piece, Soldier, Team};
+use tafl::board::{Board, Piece, Team};
 use tafl::cons::TILE_SIZE;
 use tafl::utils::xy2rowcol;
 
@@ -74,13 +74,12 @@ async fn main() {
             match board.selected_square {
                 None => match board.state[row][col] {
                     None => {}
-                    Some(Piece::King(_)) => match player_turn {
-                        Team::Defender => {
+                    Some(Piece::King(_)) => {
+                        if let Team::Defender = player_turn {
                             board.selected_square = Some((row, col));
                             add_legal_moves(row, col, &board.state, &mut legal_moves);
                         }
-                        _ => {}
-                    },
+                    }
                     Some(Piece::Soldier(s)) => match (player_turn, s.team) {
                         (Team::Defender, Team::Defender) | (Team::Attacker, Team::Attacker) => {
                             board.selected_square = Some((row, col));
@@ -106,13 +105,12 @@ async fn main() {
                     } else {
                         // Select new square
                         match board.state[row][col] {
-                            Some(Piece::King(_)) => match player_turn {
-                                Team::Defender => {
+                            Some(Piece::King(_)) => {
+                                if let Team::Defender = player_turn {
                                     board.selected_square = Some((row, col));
                                     add_legal_moves(row, col, &board.state, &mut legal_moves);
                                 }
-                                _ => {}
-                            },
+                            }
                             Some(Piece::Soldier(s)) => match (s.team, player_turn) {
                                 (Team::Defender, Team::Defender)
                                 | (Team::Attacker, Team::Attacker) => {
