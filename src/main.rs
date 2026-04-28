@@ -97,7 +97,8 @@ async fn main() {
                         player_turn = match player_turn {
                             Team::Attacker => Team::Defender,
                             Team::Defender => Team::Attacker,
-                        }
+                        };
+                        legal_moves.clear();
                     } else if (row, col) == (player_row, player_col) {
                         // Unselect current square
                         board.selected_square = None;
