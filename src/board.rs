@@ -43,6 +43,56 @@ pub enum Piece {
     King(King),
 }
 
+pub trait Move {
+    fn add_legal_moves(
+        &self,
+        row: usize,
+        col: usize,
+        board: &Board,
+        legal_moves: &mut HashSet<(usize, usize)>,
+    ) {
+        legal_moves.clear();
+        for i in (0..row)
+            .rev()
+            .take_while(|&i| board.state[i][col].is_none())
+        {
+            if self.is_square_allowed(i, col, board) {
+                legal_moves.insert((i, col));
+            }
+        }
+        for i in (row + 1..11).take_while(|&i| board.state[i][col].is_none()) {
+            if self.is_square_allowed(i, col, board) {
+                legal_moves.insert((i, col));
+            }
+        }
+        for i in (0..col)
+            .rev()
+            .take_while(|&i| board.state[row][i].is_none())
+        {
+            if self.is_square_allowed(row, i, board) {
+                legal_moves.insert((row, i));
+            }
+        }
+        for i in (col + 1..11).take_while(|&i| board.state[row][i].is_none()) {
+            if self.is_square_allowed(row, i, board) {
+                legal_moves.insert((row, i));
+            }
+        }
+    }
+    fn is_square_allowed(&self, row: usize, col: usize, board: &Board) -> bool;
+}
+
+impl Move for King {
+    fn is_square_allowed(&self, _: usize, _: usize, _: &Board) -> bool {
+        true
+    }
+}
+impl Move for Soldier {
+    fn is_square_allowed(&self, row: usize, col: usize, board: &Board) -> bool {
+        board.board[row][col].is_none()
+    }
+}
+
 pub struct Board {
     pub board: Vec<Vec<Option<SpecialSquare>>>,
     pub state: Vec<Vec<Option<Piece>>>,
