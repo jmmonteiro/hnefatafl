@@ -1,16 +1,16 @@
 use std::collections::HashSet;
 
+use hnefatafl::board::{Board, GameState, Move, Piece, SpecialSquare, Team};
+use hnefatafl::cons::TILE_SIZE;
+use hnefatafl::utils::xy2rowcol;
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
-use tafl::board::{Board, GameState, Move, Piece, SpecialSquare, Team};
-use tafl::cons::TILE_SIZE;
-use tafl::utils::xy2rowcol;
 
 fn window_conf() -> macroquad::conf::Conf {
     let window_size = (TILE_SIZE as i32) * 11 + 11;
     macroquad::conf::Conf {
         miniquad_conf: Conf {
-            window_title: "Taft".to_owned(),
+            window_title: "Hnefatafl".to_owned(),
             fullscreen: false,
             window_width: window_size,
             window_height: window_size,
