@@ -245,7 +245,7 @@ impl Board {
                 match &self.state[r][c] {
                     None => {}
                     Some(Piece::King(_)) => {
-                        draw_piece(x, y, PURPLE);
+                        draw_piece(x, y, DARKGRAY);
                     }
                     Some(Piece::Soldier(s)) => match s.team {
                         Team::Attacker => {

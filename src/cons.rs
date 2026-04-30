@@ -1,1 +1,1 @@
-pub const TILE_SIZE: f32 = 60.;
+pub const TILE_SIZE: f32 = 80.;
