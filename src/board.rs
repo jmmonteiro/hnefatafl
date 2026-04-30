@@ -1,14 +1,20 @@
 use macroquad::prelude::*;
-use std::collections::HashSet;
+use std::{collections::HashSet, os::unix::raw::pid_t};
 
 use crate::cons::TILE_SIZE;
+
+pub enum GameState {
+    Playing,
+    AttackerWins,
+    DefenderWins,
+}
 
 pub enum SpecialSquare {
     Escape,
     Throne,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Team {
     Attacker,
     Defender,
@@ -90,6 +96,60 @@ impl Move for King {
 impl Move for Soldier {
     fn is_square_allowed(&self, row: usize, col: usize, board: &Board) -> bool {
         board.board[row][col].is_none()
+    }
+}
+
+impl Piece {
+    fn get_team(&self, piece: &Piece) -> Team {
+        match piece {
+            Piece::Soldier(p) => p.team,
+            Piece::King(p) => p.team,
+        }
+    }
+    fn is_hostile_square(&self, row: i8, col: i8, board: &Board) -> bool {
+        // Out of bounds
+        if row < 0 || col < 0 || row > 10 || col > 10 {
+            return true;
+        }
+
+        // Special Square
+        if board.board[row as usize][col as usize].is_some() {
+            return true;
+        }
+
+        // Enemy present
+        board.state[row as usize][col as usize]
+            .map(|p| self.get_team(&p) != self.get_team(self))
+            .unwrap_or(false)
+    }
+    pub fn is_captured(&self, row: i8, col: i8, board: &mut Board) -> GameState {
+        match board.state[row as usize][col as usize] {
+            None => GameState::Playing,
+            Some(p) => {
+                match p {
+                    Piece::Soldier(_) => {
+                        if (self.is_hostile_square(row - 1, col, board)
+                            && self.is_hostile_square(row + 1, col, board))
+                            || (self.is_hostile_square(row, col - 1, board)
+                                && self.is_hostile_square(row, col + 1, board))
+                        {
+                            board.state[row as usize][col as usize] = None;
+                        }
+                        return GameState::Playing;
+                    }
+                    Piece::King(_) => {
+                        if self.is_hostile_square(row - 1, col, board)
+                            && self.is_hostile_square(row + 1, col, board)
+                            && self.is_hostile_square(row, col - 1, board)
+                            && self.is_hostile_square(row, col + 1, board)
+                        {
+                            return GameState::AttackerWins;
+                        }
+                    }
+                }
+                GameState::Playing
+            }
+        }
     }
 }
 
