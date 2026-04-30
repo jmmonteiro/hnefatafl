@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use std::{collections::HashSet, os::unix::raw::pid_t};
+use std::collections::HashSet;
 
 use crate::cons::TILE_SIZE;
 
@@ -106,7 +106,7 @@ impl Piece {
             Piece::King(p) => p.team,
         }
     }
-    fn is_hostile_square(&self, row: i8, col: i8, board: &Board) -> bool {
+    fn is_hostile_square(&self, row: i32, col: i32, board: &Board) -> bool {
         // Out of bounds
         if row < 0 || col < 0 || row > 10 || col > 10 {
             return true;
@@ -122,7 +122,7 @@ impl Piece {
             .map(|p| self.get_team(&p) != self.get_team(self))
             .unwrap_or(false)
     }
-    pub fn is_captured(&self, row: i8, col: i8, board: &mut Board) -> GameState {
+    pub fn is_captured(&self, row: i32, col: i32, board: &mut Board) -> GameState {
         match board.state[row as usize][col as usize] {
             None => GameState::Playing,
             Some(p) => {
@@ -231,7 +231,7 @@ impl Board {
                     TILE_SIZE,
                     TILE_SIZE,
                     if self.board[r][c].is_some() {
-                        GRAY
+                        BROWN
                     } else {
                         BEIGE
                     },

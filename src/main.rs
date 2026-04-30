@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
-use tafl::board::{Board, Move, Piece, Team};
+use tafl::board::{Board, GameState, Move, Piece, Team};
 use tafl::cons::TILE_SIZE;
 use tafl::utils::xy2rowcol;
 
@@ -67,6 +67,22 @@ async fn main() {
                         board.state[row][col] = board.state[player_row][player_col];
                         board.state[player_row][player_col] = None;
                         board.selected_square = None;
+
+                        // Check for captures
+                        // TODO: Change this. I want to stop if the game state stops being playing
+                        [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                            .iter()
+                            .for_each(|(r, c)| {
+                                let new_row = (row as i32) + r;
+                                let new_col = (col as i32) + c;
+                                if new_row > 0 && new_row < 11 && new_col > 0 && new_col < 11 {
+                                    _ = match board.state[new_row as usize][new_col as usize] {
+                                        Some(p) => p.is_captured(new_row, new_col, &mut board),
+                                        None => GameState::Playing,
+                                    }
+                                }
+                            });
+
                         player_turn = match player_turn {
                             Team::Attacker => Team::Defender,
                             Team::Defender => Team::Attacker,
