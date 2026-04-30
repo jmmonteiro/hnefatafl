@@ -2,7 +2,7 @@ use std::collections::HashSet;
 
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
-use tafl::board::{Board, GameState, Move, Piece, Team};
+use tafl::board::{Board, GameState, Move, Piece, SpecialSquare, Team};
 use tafl::cons::TILE_SIZE;
 use tafl::utils::xy2rowcol;
 
@@ -69,32 +69,44 @@ async fn main() {
                         board.state[player_row][player_col] = None;
                         board.selected_square = None;
 
-                        // Check for captures
-                        game_state = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-                            .iter()
-                            .find_map(|(r, c)| {
-                                let new_row = (row as i32) + r;
-                                let new_col = (col as i32) + c;
-                                if new_row > 0 && new_row < 11 && new_col > 0 && new_col < 11 {
-                                    match board.state[new_row as usize][new_col as usize] {
-                                        Some(p) => {
-                                            match p.is_captured(new_row, new_col, &mut board) {
-                                                GameState::Playing => None,
-                                                state => Some(state),
+                        // Check if the king is in a special square
+                        game_state = if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
+                            (&board.state[row][col], &board.board[row][col])
+                        {
+                            GameState::DefenderWins
+                        } else {
+                            // Check for captures
+                            [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                                .iter()
+                                .find_map(|(r, c)| {
+                                    let new_row = (row as i32) + r;
+                                    let new_col = (col as i32) + c;
+                                    if new_row > 0 && new_row < 11 && new_col > 0 && new_col < 11 {
+                                        match board.state[new_row as usize][new_col as usize] {
+                                            Some(p) => {
+                                                match p.is_captured(new_row, new_col, &mut board) {
+                                                    GameState::Playing => None,
+                                                    state => Some(state),
+                                                }
                                             }
+                                            None => None,
                                         }
-                                        None => None,
+                                    } else {
+                                        None
                                     }
-                                } else {
-                                    None
-                                }
-                            })
-                            .unwrap_or(GameState::Playing);
+                                })
+                                .unwrap_or(GameState::Playing)
+                        };
 
-                        if game_state != GameState::Playing {
-                            println!("Kind is captured.")
+                        match game_state {
+                            GameState::Playing => {}
+                            GameState::AttackerWins => {
+                                println!("Attackers Win.")
+                            }
+                            GameState::DefenderWins => {
+                                println!("Defenders Win.")
+                            }
                         }
-
                         player_turn = match player_turn {
                             Team::Attacker => Team::Defender,
                             Team::Defender => Team::Attacker,

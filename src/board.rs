@@ -21,7 +21,7 @@ pub enum Team {
     Defender,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Soldier {
     pub team: Team,
 }
@@ -31,7 +31,7 @@ impl Soldier {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct King {
     pub team: Team,
 }
@@ -44,7 +44,7 @@ impl King {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq)]
 pub enum Piece {
     Soldier(Soldier),
     King(King),
