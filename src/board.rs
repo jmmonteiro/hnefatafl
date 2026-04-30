@@ -205,9 +205,6 @@ impl Board {
     }
 
     pub fn draw(&self, legal_moves: &HashSet<(usize, usize)>) {
-        // TODO: The math is not 100% correct, does not account for the border between each tile
-        // but in practice the difference should be small. Fix later if I can be arsed
-
         fn rowcol2xy(row: usize, col: usize) -> (f32, f32) {
             (
                 (col as f32) * (TILE_SIZE + 1.),
