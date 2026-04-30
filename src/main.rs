@@ -33,6 +33,7 @@ async fn main() {
     let mut legal_moves: HashSet<(usize, usize)> = HashSet::new();
 
     let mut board = Board::new();
+    let mut game_state = GameState::Playing;
 
     loop {
         clear_background(BLACK);
@@ -41,7 +42,7 @@ async fn main() {
         board.draw(&legal_moves);
 
         // Get input
-        if is_mouse_button_pressed(MouseButton::Left) {
+        if game_state == GameState::Playing && is_mouse_button_pressed(MouseButton::Left) {
             let (x, y) = mouse_position();
             let (row, col) = xy2rowcol(x, y);
             match board.selected_square {
@@ -69,19 +70,30 @@ async fn main() {
                         board.selected_square = None;
 
                         // Check for captures
-                        // TODO: Change this. I want to stop if the game state stops being playing
-                        [(-1, 0), (1, 0), (0, -1), (0, 1)]
+                        game_state = [(-1, 0), (1, 0), (0, -1), (0, 1)]
                             .iter()
-                            .for_each(|(r, c)| {
+                            .find_map(|(r, c)| {
                                 let new_row = (row as i32) + r;
                                 let new_col = (col as i32) + c;
                                 if new_row > 0 && new_row < 11 && new_col > 0 && new_col < 11 {
-                                    _ = match board.state[new_row as usize][new_col as usize] {
-                                        Some(p) => p.is_captured(new_row, new_col, &mut board),
-                                        None => GameState::Playing,
+                                    match board.state[new_row as usize][new_col as usize] {
+                                        Some(p) => {
+                                            match p.is_captured(new_row, new_col, &mut board) {
+                                                GameState::Playing => None,
+                                                state => Some(state),
+                                            }
+                                        }
+                                        None => None,
                                     }
+                                } else {
+                                    None
                                 }
-                            });
+                            })
+                            .unwrap_or(GameState::Playing);
+
+                        if game_state != GameState::Playing {
+                            println!("Kind is captured.")
+                        }
 
                         player_turn = match player_turn {
                             Team::Attacker => Team::Defender,

@@ -3,6 +3,7 @@ use std::collections::HashSet;
 
 use crate::cons::TILE_SIZE;
 
+#[derive(PartialEq)]
 pub enum GameState {
     Playing,
     AttackerWins,
