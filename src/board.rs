@@ -256,7 +256,14 @@ impl Board {
                 match &self.state[r][c] {
                     None => {}
                     Some(Piece::King(_)) => {
-                        draw_piece(x, y, DARKGRAY);
+                        draw_poly(
+                            x + (TILE_SIZE + 1.) / 2.,
+                            y + (TILE_SIZE + 1.) / 2.,
+                            4,
+                            TILE_SIZE / 2.3,
+                            90.,
+                            WHITE,
+                        );
                     }
                     Some(Piece::Soldier(s)) => match s.team {
                         Team::Attacker => {
