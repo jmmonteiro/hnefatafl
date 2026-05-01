@@ -108,21 +108,32 @@ impl Piece {
         }
     }
     fn is_hostile_square(&self, row: i32, col: i32, board: &Board) -> bool {
+        let row = row as usize;
+        let col = col as usize;
         // Out of bounds
-        if row < 0 || col < 0 || row > 10 || col > 10 {
-            return true;
-        }
+        // TODO: The edges are not hostile, but in some rulesets the king can be
+        // captured when he's surronded on the edge by 3 sides and it's the only piece
 
-        // Special Square
-        if board.board[row as usize][col as usize].is_some() {
+        // Special Squares
+        if let Some(s) = &board.board[row][col] {
+            // If the piece is a defender and the throne is occupied, then it's not and
+            // hostile square
+            if matches!(s, SpecialSquare::Throne)
+                && board.state[row][col].is_some()
+                && self.get_team(self) == Team::Defender
+            {
+                return false;
+            }
+
             return true;
         }
 
         // Enemy present
-        board.state[row as usize][col as usize]
+        board.state[row][col]
             .map(|p| self.get_team(&p) != self.get_team(self))
             .unwrap_or(false)
     }
+
     pub fn is_captured(&self, row: i32, col: i32, board: &mut Board) -> GameState {
         match board.state[row as usize][col as usize] {
             None => GameState::Playing,
