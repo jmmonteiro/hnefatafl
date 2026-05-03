@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::HashSet;
 
-use crate::cons::TILE_SIZE;
+use crate::cons::{NUM_TILES, TILE_SIZE};
 
 #[derive(PartialEq)]
 pub enum GameState {
@@ -67,7 +67,7 @@ pub trait Move {
                 legal_moves.insert((i, col));
             }
         }
-        for i in (row + 1..11).take_while(|&i| board.state[i][col].is_none()) {
+        for i in (row + 1..NUM_TILES).take_while(|&i| board.state[i][col].is_none()) {
             if self.is_square_allowed(i, col, board) {
                 legal_moves.insert((i, col));
             }
@@ -80,7 +80,7 @@ pub trait Move {
                 legal_moves.insert((row, i));
             }
         }
-        for i in (col + 1..11).take_while(|&i| board.state[row][i].is_none()) {
+        for i in (col + 1..NUM_TILES).take_while(|&i| board.state[row][i].is_none()) {
             if self.is_square_allowed(row, i, board) {
                 legal_moves.insert((row, i));
             }
@@ -110,9 +110,6 @@ impl Piece {
     fn is_hostile_square(&self, row: i32, col: i32, board: &Board) -> bool {
         let row = row as usize;
         let col = col as usize;
-        // Out of bounds
-        // TODO: The edges are not hostile, but in some rulesets the king can be
-        // captured when he's surronded on the edge by 3 sides and it's the only piece
 
         // Special Squares
         if let Some(s) = &board.board[row][col] {
@@ -172,9 +169,9 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new() -> Board {
-        let mut board: Vec<Vec<Option<SpecialSquare>>> = (0..11)
-            .map(|_| -> Vec<Option<SpecialSquare>> { (0..11).map(|_| None).collect() })
+    pub fn new(initial_state: [[u8; NUM_TILES]; NUM_TILES]) -> Board {
+        let mut board: Vec<Vec<Option<SpecialSquare>>> = (0..NUM_TILES)
+            .map(|_| -> Vec<Option<SpecialSquare>> { (0..NUM_TILES).map(|_| None).collect() })
             .collect();
 
         for (r, c) in [(0, 0), (0, 10), (10, 0), (10, 10)] {
@@ -182,23 +179,10 @@ impl Board {
         }
         board[5][5] = Some(SpecialSquare::Throne);
 
-        let state_int: [[u8; 11]; 11] = [
-            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
-            [1, 1, 0, 2, 2, 3, 2, 2, 0, 1, 1],
-            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-        ];
-        let state: Vec<Vec<Option<Piece>>> = (0..11)
+        let state: Vec<Vec<Option<Piece>>> = (0..NUM_TILES)
             .map(|r| {
-                (0..11)
-                    .map(|c| match state_int[r][c] {
+                (0..NUM_TILES)
+                    .map(|c| match initial_state[r][c] {
                         1 => Some(Piece::Soldier(Soldier::new(Team::Attacker))),
                         2 => Some(Piece::Soldier(Soldier::new(Team::Defender))),
                         3 => Some(Piece::King(King::new())),
@@ -231,8 +215,8 @@ impl Board {
             );
         }
 
-        (0..11).for_each(|r| {
-            (0..11).for_each(|c| {
+        (0..NUM_TILES).for_each(|r| {
+            (0..NUM_TILES).for_each(|c| {
                 let (x, y) = rowcol2xy(r, c);
                 draw_rectangle(
                     x,
@@ -281,6 +265,18 @@ impl Board {
 
 impl Default for Board {
     fn default() -> Self {
-        Self::new()
+        Self::new([
+            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
+            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
+            [1, 1, 0, 2, 2, 3, 2, 2, 0, 1, 1],
+            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
+            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+        ])
     }
 }

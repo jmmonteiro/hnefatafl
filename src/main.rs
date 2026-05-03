@@ -1,13 +1,16 @@
+//  Fetlar Hnefatafl
+// https://aagenielsen.dk/fetlar_rules_en.php
+
 use std::collections::HashSet;
 
 use hnefatafl::board::{Board, GameState, Move, Piece, SpecialSquare, Team};
-use hnefatafl::cons::TILE_SIZE;
+use hnefatafl::cons::{NUM_TILES, TILE_SIZE};
 use hnefatafl::utils::xy2rowcol;
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
 
 fn window_conf() -> macroquad::conf::Conf {
-    let window_size = (TILE_SIZE as i32) * 11 + 11;
+    let window_size = (TILE_SIZE as i32) * (NUM_TILES as i32) + (NUM_TILES as i32);
     macroquad::conf::Conf {
         miniquad_conf: Conf {
             window_title: "Hnefatafl".to_owned(),
@@ -32,7 +35,7 @@ async fn main() {
     let mut player_turn = Team::Attacker;
     let mut legal_moves: HashSet<(usize, usize)> = HashSet::new();
 
-    let mut board = Board::new();
+    let mut board = Board::default();
     let mut game_state = GameState::Playing;
 
     loop {
@@ -63,11 +66,14 @@ async fn main() {
                     },
                 },
                 Some((player_row, player_col)) => {
+                    // Move piece
                     if legal_moves.contains(&(row, col)) {
-                        // Move piece
                         board.state[row][col] = board.state[player_row][player_col];
                         board.state[player_row][player_col] = None;
                         board.selected_square = None;
+
+                        // TODO: Check that the defenders are not surrounded
+                        // https://aagenielsen.dk/fetlar_rules_en.php
 
                         // Check if the king is in a special square
                         game_state = if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
@@ -81,7 +87,11 @@ async fn main() {
                                 .find_map(|(r, c)| {
                                     let new_row = (row as i32) + r;
                                     let new_col = (col as i32) + c;
-                                    if new_row > 0 && new_row < 11 && new_col > 0 && new_col < 11 {
+                                    if new_row > 0
+                                        && new_row < (NUM_TILES as i32)
+                                        && new_col > 0
+                                        && new_col < (NUM_TILES as i32)
+                                    {
                                         match board.state[new_row as usize][new_col as usize] {
                                             Some(p) => {
                                                 match p.is_captured(new_row, new_col, &mut board) {
@@ -112,6 +122,7 @@ async fn main() {
                             Team::Defender => Team::Attacker,
                         };
                         legal_moves.clear();
+                        // TODO: Check that player has pieces that they can move
                     } else if (row, col) == (player_row, player_col) {
                         // Unselect current square
                         board.selected_square = None;
