@@ -44,7 +44,19 @@ async fn main() {
         // Draw board
         board.draw(&legal_moves);
 
-        // TODO: Check that player has pieces that they can move
+        // Check that player has pieces that they can move
+        if !board.has_possible_moves(&player_turn) {
+            match player_turn {
+                Team::Attacker => {
+                    game_state = GameState::DefenderWins;
+                    println!("Attackers have no possible moves. Defenders win.")
+                }
+                Team::Defender => {
+                    game_state = GameState::AttackerWins;
+                    println!("Defenders have no possible moves. Attackers win.")
+                }
+            }
+        }
 
         // Get input
         if game_state == GameState::Playing && is_mouse_button_pressed(MouseButton::Left) {
