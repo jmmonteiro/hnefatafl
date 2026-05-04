@@ -3,7 +3,7 @@
 
 use std::collections::HashSet;
 
-use hnefatafl::board::{Board, GameState, Move, Piece, SpecialSquare, Team};
+use hnefatafl::board::{Board, GameState, Piece, SpecialSquare, Team};
 use hnefatafl::cons::{NUM_TILES, TILE_SIZE};
 use hnefatafl::utils::xy2rowcol;
 use macroquad::conf::UpdateTrigger;
@@ -44,27 +44,21 @@ async fn main() {
         // Draw board
         board.draw(&legal_moves);
 
+        // TODO: Check that player has pieces that they can move
+
         // Get input
         if game_state == GameState::Playing && is_mouse_button_pressed(MouseButton::Left) {
             let (x, y) = mouse_position();
             let (row, col) = xy2rowcol(x, y);
             match board.selected_square {
-                None => match board.state[row][col] {
-                    None => {}
-                    Some(Piece::King(k)) => {
-                        if let Team::Defender = player_turn {
-                            board.selected_square = Some((row, col));
-                            k.add_legal_moves(row, col, &board, &mut legal_moves);
-                        }
+                None => {
+                    if let Some(p) = board.state[row][col]
+                        && player_turn == p.get_team()
+                    {
+                        board.selected_square = Some((row, col));
+                        legal_moves = p.get_legal_moves(row, col, &board);
                     }
-                    Some(Piece::Soldier(s)) => match (player_turn, s.team) {
-                        (Team::Defender, Team::Defender) | (Team::Attacker, Team::Attacker) => {
-                            board.selected_square = Some((row, col));
-                            s.add_legal_moves(row, col, &board, &mut legal_moves);
-                        }
-                        _ => {}
-                    },
-                },
+                }
                 Some((player_row, player_col)) => {
                     // Move piece
                     if legal_moves.contains(&(row, col)) {
@@ -88,8 +82,8 @@ async fn main() {
                                     let new_row = (row as i32) + r;
                                     let new_col = (col as i32) + c;
                                     if new_row > 0
-                                        && new_row < (NUM_TILES as i32)
                                         && new_col > 0
+                                        && new_row < (NUM_TILES as i32)
                                         && new_col < (NUM_TILES as i32)
                                     {
                                         match board.state[new_row as usize][new_col as usize] {
@@ -122,29 +116,15 @@ async fn main() {
                             Team::Defender => Team::Attacker,
                         };
                         legal_moves.clear();
-                        // TODO: Check that player has pieces that they can move
                     } else if (row, col) == (player_row, player_col) {
                         // Unselect current square
                         board.selected_square = None;
                         legal_moves.clear();
                     } else {
                         // Select new square
-                        match board.state[row][col] {
-                            Some(Piece::King(k)) => {
-                                if let Team::Defender = player_turn {
-                                    board.selected_square = Some((row, col));
-                                    k.add_legal_moves(row, col, &board, &mut legal_moves);
-                                }
-                            }
-                            Some(Piece::Soldier(s)) => match (s.team, player_turn) {
-                                (Team::Defender, Team::Defender)
-                                | (Team::Attacker, Team::Attacker) => {
-                                    board.selected_square = Some((row, col));
-                                    s.add_legal_moves(row, col, &board, &mut legal_moves);
-                                }
-                                _ => {}
-                            },
-                            None => {}
+                        if let Some(p) = board.state[row][col] {
+                            board.selected_square = Some((row, col));
+                            legal_moves = p.get_legal_moves(row, col, &board);
                         }
                     }
                 }

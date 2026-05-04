@@ -51,14 +51,8 @@ pub enum Piece {
 }
 
 pub trait Move {
-    fn add_legal_moves(
-        &self,
-        row: usize,
-        col: usize,
-        board: &Board,
-        legal_moves: &mut HashSet<(usize, usize)>,
-    ) {
-        legal_moves.clear();
+    fn get_legal_moves(&self, row: usize, col: usize, board: &Board) -> HashSet<(usize, usize)> {
+        let mut legal_moves: HashSet<(usize, usize)> = HashSet::new();
         for i in (0..row)
             .rev()
             .take_while(|&i| board.state[i][col].is_none())
@@ -85,6 +79,7 @@ pub trait Move {
                 legal_moves.insert((row, i));
             }
         }
+        legal_moves
     }
     fn is_square_allowed(&self, row: usize, col: usize, board: &Board) -> bool;
 }
@@ -101,13 +96,30 @@ impl Move for Soldier {
 }
 
 impl Piece {
-    fn get_team(&self, piece: &Piece) -> Team {
-        match piece {
+    pub fn get_legal_moves(
+        &self,
+        row: usize,
+        col: usize,
+        board: &Board,
+    ) -> HashSet<(usize, usize)> {
+        match &self {
+            Piece::Soldier(p) => p.get_legal_moves(row, col, board),
+            Piece::King(p) => p.get_legal_moves(row, col, board),
+        }
+    }
+
+    pub fn get_team(&self) -> Team {
+        match &self {
             Piece::Soldier(p) => p.team,
             Piece::King(p) => p.team,
         }
     }
     fn is_hostile_square(&self, row: i32, col: i32, board: &Board) -> bool {
+        // Check bounds
+        if row < 0 || col < 0 || row >= NUM_TILES as i32 || col >= NUM_TILES as i32 {
+            return false;
+        }
+
         let row = row as usize;
         let col = col as usize;
 
@@ -117,7 +129,7 @@ impl Piece {
             // hostile square
             if matches!(s, SpecialSquare::Throne)
                 && board.state[row][col].is_some()
-                && self.get_team(self) == Team::Defender
+                && self.get_team() == Team::Defender
             {
                 return false;
             }
@@ -127,7 +139,7 @@ impl Piece {
 
         // Enemy present
         board.state[row][col]
-            .map(|p| self.get_team(&p) != self.get_team(self))
+            .map(|p| p.get_team() != self.get_team())
             .unwrap_or(false)
     }
 
@@ -174,7 +186,12 @@ impl Board {
             .map(|_| -> Vec<Option<SpecialSquare>> { (0..NUM_TILES).map(|_| None).collect() })
             .collect();
 
-        for (r, c) in [(0, 0), (0, 10), (10, 0), (10, 10)] {
+        for (r, c) in [
+            (0, 0),
+            (0, NUM_TILES - 1),
+            (NUM_TILES - 1, 0),
+            (NUM_TILES - 1, NUM_TILES - 1),
+        ] {
             board[r][c] = Some(SpecialSquare::Escape);
         }
         board[5][5] = Some(SpecialSquare::Throne);
