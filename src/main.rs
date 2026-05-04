@@ -81,8 +81,8 @@ async fn main() {
                                 .find_map(|(r, c)| {
                                     let new_row = (row as i32) + r;
                                     let new_col = (col as i32) + c;
-                                    if new_row > 0
-                                        && new_col > 0
+                                    if new_row >= 0
+                                        && new_col >= 0
                                         && new_row < (NUM_TILES as i32)
                                         && new_col < (NUM_TILES as i32)
                                     {
