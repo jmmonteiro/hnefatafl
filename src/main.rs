@@ -58,6 +58,12 @@ async fn main() {
             }
         }
 
+        // Check that the defenders are not surrounded
+        if player_turn == Team::Defender && board.is_surrounded() {
+            game_state = GameState::AttackerWins;
+            println!("Defenders surrounded by a single circle. Attackers win.")
+        }
+
         // Get input
         if game_state == GameState::Playing && is_mouse_button_pressed(MouseButton::Left) {
             let (x, y) = mouse_position();
@@ -77,9 +83,6 @@ async fn main() {
                         board.state[row][col] = board.state[player_row][player_col];
                         board.state[player_row][player_col] = None;
                         board.selected_square = None;
-
-                        // TODO: Check that the defenders are not surrounded
-                        // https://aagenielsen.dk/fetlar_rules_en.php
 
                         // Check if the king is in a special square
                         game_state = if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =

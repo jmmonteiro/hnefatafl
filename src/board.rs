@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use std::collections::HashSet;
+use std::collections::{HashSet, VecDeque};
 
 use crate::cons::{NUM_TILES, TILE_SIZE};
 
@@ -292,6 +292,67 @@ impl Board {
         }
         false
     }
+
+    pub fn is_surrounded(&self) -> bool {
+        let mut defenders: HashSet<(usize, usize)> = HashSet::new();
+        for r in 0..NUM_TILES {
+            for c in 0..NUM_TILES {
+                if let Some(p) = self.state[r][c]
+                    && p.get_team() == Team::Defender
+                {
+                    defenders.insert((r, c));
+                }
+            }
+        }
+        assert!(!defenders.is_empty());
+
+        // BFS first element in defenders.
+        // If all other defenders were visited, then it's surrounded by a continuous
+        // curve
+        let mut queue: VecDeque<(usize, usize)> = VecDeque::from(vec![
+            defenders
+                .take(&defenders.iter().next().cloned().unwrap())
+                .unwrap(),
+        ]);
+
+        let mut visited: HashSet<(usize, usize)> = HashSet::new();
+
+        while !queue.is_empty() {
+            if let Some((r, c)) = queue.pop_front() {
+                if visited.contains(&(r, c)) {
+                    continue;
+                }
+                visited.insert((r, c));
+
+                if let Some(p) = self.state[r][c]
+                    && p.get_team() == Team::Attacker
+                {
+                    continue;
+                }
+                defenders.remove(&(r, c));
+
+                // At least one piece can reach the edge, it's not surrounded
+                if r == 0 || c == 0 || r == NUM_TILES - 1 || c == NUM_TILES - 1 {
+                    return false;
+                }
+
+                if r > 0 {
+                    queue.push_back((r - 1, c));
+                }
+                if c > 0 {
+                    queue.push_back((r, c - 1));
+                }
+                if r < NUM_TILES - 1 {
+                    queue.push_back((r + 1, c));
+                }
+                if c < NUM_TILES - 1 {
+                    queue.push_back((r, c + 1));
+                }
+            }
+        }
+
+        defenders.is_empty()
+    }
 }
 
 impl Default for Board {
@@ -349,6 +410,63 @@ mod tests {
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             ])
             .has_possible_moves(&Team::Attacker)
+        );
+    }
+
+    #[test]
+    fn test_surround() {
+        // Single curve surrounded
+        assert!(
+            Board::new([
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ])
+            .is_surrounded()
+        );
+
+        // 2 curves - not single curve surrounded
+        assert!(
+            !Board::new([
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                [0, 1, 1, 1, 1, 1, 0, 1, 2, 0, 1],
+                [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ])
+            .is_surrounded()
+        );
+
+        // 1 piece not surrounded
+        assert!(
+            !Board::new([
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                [0, 1, 1, 1, 1, 1, 0, 0, 2, 0, 1],
+                [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ])
+            .is_surrounded()
         );
     }
 }
