@@ -55,7 +55,7 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
     let window_style = root_ui()
         .style_builder()
         //.background(window_background)
-        .background_margin(RectOffset::new(32.0, 76.0, 44.0, 20.0))
+        .background_margin(RectOffset::new(0.0, 76.0, 44.0, 20.0))
         .margin(RectOffset::new(0.0, -40.0, 0.0, 0.0))
         .build();
     let button_style = root_ui()
@@ -97,8 +97,8 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
         ),
         window_size,
         |ui| {
-            ui.label(vec2(5.0, 5.0), message);
-            if ui.button(vec2(5.0, 50.0), "Play Again?") {
+            ui.label(vec2(0.0, 5.0), message);
+            if ui.button(vec2(15.0, 50.0), "Play Again?") {
                 *game_state = GameState::Playing;
                 *board = Board::default();
             }

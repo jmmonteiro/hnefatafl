@@ -83,13 +83,14 @@ pub fn game_loop(
                             {
                                 continue;
                             }
-                            if let Some(p) = board.state[new_row as usize][new_col as usize] {
-                                if p.is_captured(new_row, new_col, board) == GameState::GameOver {
-                                    return (
-                                        GameState::GameOver,
-                                        "The king has been captured. Attackers win!".to_string(),
-                                    );
-                                }
+                            let Some(p) = board.state[new_row as usize][new_col as usize] else {
+                                continue;
+                            };
+                            if p.is_captured(new_row, new_col, board) == GameState::GameOver {
+                                return (
+                                    GameState::GameOver,
+                                    "The king has been captured. Attackers win!".to_string(),
+                                );
                             }
                         }
                     };
