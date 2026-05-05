@@ -2,13 +2,7 @@ use macroquad::prelude::*;
 use std::collections::{HashSet, VecDeque};
 
 use crate::cons::{NUM_TILES, TILE_SIZE};
-
-#[derive(PartialEq)]
-pub enum GameState {
-    Playing,
-    AttackerWins,
-    DefenderWins,
-}
+use crate::game::GameState;
 
 pub enum SpecialSquare {
     Escape,
@@ -164,7 +158,7 @@ impl Piece {
                             && self.is_hostile_square(row, col - 1, board)
                             && self.is_hostile_square(row, col + 1, board)
                         {
-                            return GameState::AttackerWins;
+                            return GameState::GameOver;
                         }
                     }
                 }
