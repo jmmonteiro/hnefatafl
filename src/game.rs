@@ -86,7 +86,9 @@ pub fn game_loop(
                             let Some(p) = board.state[new_row as usize][new_col as usize] else {
                                 continue;
                             };
-                            if p.is_captured(new_row, new_col, board) == GameState::GameOver {
+                            if p.is_captured(new_row, new_col, board, row as i32, col as i32)
+                                == GameState::GameOver
+                            {
                                 return (
                                     GameState::GameOver,
                                     "The king has been captured. Attackers win!".to_string(),

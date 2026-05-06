@@ -137,16 +137,26 @@ impl Piece {
             .unwrap_or(false)
     }
 
-    pub fn is_captured(&self, row: i32, col: i32, board: &mut Board) -> GameState {
+    pub fn is_captured(
+        &self,
+        row: i32,
+        col: i32,
+        board: &mut Board,
+        origin_row: i32,
+        origin_col: i32,
+    ) -> GameState {
         match board.state[row as usize][col as usize] {
             None => GameState::Playing,
             Some(p) => {
                 match p {
                     Piece::Soldier(_) => {
-                        if (self.is_hostile_square(row - 1, col, board)
-                            && self.is_hostile_square(row + 1, col, board))
-                            || (self.is_hostile_square(row, col - 1, board)
-                                && self.is_hostile_square(row, col + 1, board))
+                        // Only check hostile squares on the opposite side of the origin_square
+                        if self.is_hostile_square(origin_row, origin_col, board)
+                            && self.is_hostile_square(
+                                row + (row - origin_row),
+                                col + (col - origin_col),
+                                board,
+                            )
                         {
                             board.state[row as usize][col as usize] = None;
                         }
