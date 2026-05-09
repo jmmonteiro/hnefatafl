@@ -79,7 +79,7 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
         //      .font(&font)
         //.unwrap()
         .text_color(BLACK)
-        .font_size(20)
+        .font_size(40)
         .build();
     let ui_skin = Skin {
         window_style,
@@ -97,12 +97,12 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
         ),
         window_size,
         |ui| {
-            ui.label(vec2(0.0, 5.0), message);
-            if ui.button(vec2(15.0, 50.0), "Play Again?") {
+            ui.label(vec2(40.0, 0.0), message);
+            if ui.button(vec2(15.0, 75.0), "Play Again?") {
                 *game_state = GameState::Playing;
                 *board = Board::default();
             }
-            if ui.button(vec2(65.0, 155.0), "Quit") {
+            if ui.button(vec2(100.0, 155.0), "Quit") {
                 std::process::exit(0);
             }
         },

@@ -28,18 +28,15 @@ pub fn game_loop(
         return (
             GameState::GameOver,
             match player_turn {
-                Team::Attacker => "Attackers have no possible moves. Defenders win.".to_string(),
-                Team::Defender => "Defenders have no possible moves. Attackers win.".to_string(),
+                Team::Attacker => "Defenders win!".to_string(),
+                Team::Defender => "Attackers win!".to_string(),
             },
         );
     }
 
     // Check that the defenders are not surrounded
     if *player_turn == Team::Defender && board.is_surrounded() {
-        return (
-            GameState::GameOver,
-            "Defenders surrounded by a single circle. Attackers win.".to_string(),
-        );
+        return (GameState::GameOver, "Attackers win!".to_string());
     }
 
     // Get input
@@ -67,10 +64,7 @@ pub fn game_loop(
                     if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
                         (&board.state[row][col], &board.board[row][col])
                     {
-                        return (
-                            GameState::GameOver,
-                            "The king has escaped. Defenders win!".to_string(),
-                        );
+                        return (GameState::GameOver, "Defenders win!".to_string());
                     } else {
                         // Check for captures
                         for (r, c) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
@@ -89,10 +83,7 @@ pub fn game_loop(
                             if p.is_captured(new_row, new_col, board, row as i32, col as i32)
                                 == GameState::GameOver
                             {
-                                return (
-                                    GameState::GameOver,
-                                    "The king has been captured. Attackers win!".to_string(),
-                                );
+                                return (GameState::GameOver, "Attackers win!".to_string());
                             }
                         }
                     };
