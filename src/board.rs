@@ -340,18 +340,11 @@ impl Board {
                     return false;
                 }
 
-                if r > 0 {
-                    queue.push_back((r - 1, c));
-                }
-                if c > 0 {
-                    queue.push_back((r, c - 1));
-                }
-                if r < NUM_TILES - 1 {
-                    queue.push_back((r + 1, c));
-                }
-                if c < NUM_TILES - 1 {
-                    queue.push_back((r, c + 1));
-                }
+                // Add neighbours to the queue
+                queue.push_back((r - 1, c));
+                queue.push_back((r + 1, c));
+                queue.push_back((r, c - 1));
+                queue.push_back((r, c + 1));
             }
         }
 
