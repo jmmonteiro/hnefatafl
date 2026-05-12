@@ -41,9 +41,6 @@ async fn main() {
     let mut message = "".to_string();
 
     loop {
-        if is_key_pressed(KeyCode::Escape) {
-            std::process::exit(0);
-        }
         match game_state {
             GameState::Menu => {
                 board.draw(&legal_moves);
