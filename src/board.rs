@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::{HashSet, VecDeque};
 
+use crate::board::Team::{Attacker, Defender};
 use crate::cons::{NUM_TILES, TILE_SIZE};
 use crate::game::GameState;
 
@@ -350,6 +351,26 @@ impl Board {
 
         defenders.is_empty()
     }
+
+    pub fn get_state(&self) -> String {
+        let mut output = "".to_string();
+        for row in &self.state {
+            for s in row {
+                match s {
+                    None => output.push('0'),
+                    Some(p) => match p {
+                        Piece::King(_) => output.push('3'),
+                        Piece::Soldier(_) => match p.get_team() {
+                            Attacker => output.push('1'),
+                            Defender => output.push('2'),
+                        },
+                    },
+                }
+            }
+            output.push('|');
+        }
+        output
+    }
 }
 
 impl Default for Board {
@@ -464,6 +485,28 @@ mod tests {
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             ])
             .is_surrounded()
+        );
+    }
+
+    #[test]
+    fn test_get_state() {
+        // Single curve surrounded
+        assert!(
+            Board::new([
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
+                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+            ])
+            .get_state()
+                == "00000000000|00000000000|00000000000|01111110000|01000010000|01000010000|01023010000|01000010000|01111110000|00000000000|00000000000|"
         );
     }
 }
