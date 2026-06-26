@@ -352,22 +352,23 @@ impl Board {
         defenders.is_empty()
     }
 
-    pub fn get_state(&self) -> String {
-        let mut output = "".to_string();
+    pub fn get_state(&self) -> [u8; NUM_TILES * NUM_TILES] {
+        let mut output = [0; NUM_TILES * NUM_TILES];
+        let mut counter = 0;
         for row in &self.state {
             for s in row {
                 match s {
-                    None => output.push('0'),
+                    None => {}
                     Some(p) => match p {
-                        Piece::King(_) => output.push('3'),
+                        Piece::King(_) => output[counter] = 3,
                         Piece::Soldier(_) => match p.get_team() {
-                            Attacker => output.push('1'),
-                            Defender => output.push('2'),
+                            Attacker => output[counter] = 1,
+                            Defender => output[counter] = 2,
                         },
                     },
                 }
+                counter += 1;
             }
-            output.push('|');
         }
         output
     }
@@ -506,7 +507,13 @@ mod tests {
                 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
             ])
             .get_state()
-                == "00000000000|00000000000|00000000000|01111110000|01000010000|01000010000|01023010000|01000010000|01111110000|00000000000|00000000000|"
+                == [
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
+                    0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0, 0,
+                    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                ],
         );
     }
 }
