@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::{HashSet, VecDeque};
 
-use crate::board::Team::{Attacker, Defender};
+use crate::board::Team::Attacker;
 use crate::cons::{NUM_TILES, TILE_SIZE};
 use crate::game::GameState;
 
@@ -186,7 +186,14 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(initial_state: [[u8; NUM_TILES]; NUM_TILES]) -> Board {
+    pub fn new(
+        initial_state: [[u8; NUM_TILES]; NUM_TILES],
+        selected_square: Option<(usize, usize)>,
+    ) -> Board {
+        if let Some((row, col)) = selected_square {
+            assert!(row < NUM_TILES && col < NUM_TILES)
+        };
+
         let mut board: Vec<Vec<Option<SpecialSquare>>> = (0..NUM_TILES)
             .map(|_| -> Vec<Option<SpecialSquare>> { (0..NUM_TILES).map(|_| None).collect() })
             .collect();
@@ -217,7 +224,7 @@ impl Board {
         Board {
             board,
             state,
-            selected_square: None,
+            selected_square,
         }
     }
 
@@ -298,6 +305,21 @@ impl Board {
         false
     }
 
+    // TODO: Finish this
+    // pub fn get_possible_moves(&self, team: &Team) -> Vec<Board> {
+    //     let mut possible_moves = vec![];
+    //     for r in 0..NUM_TILES {
+    //         for c in 0..NUM_TILES {
+    //             if let Some(p) = self.state[r][c]
+    //                 && &p.get_team() == team
+    //             {
+    //                 let moves = p.get_legal_moves(r, c, self);
+    //             }
+    //         }
+    //     }
+    //     possible_moves
+    // }
+
     pub fn is_surrounded(&self) -> bool {
         let mut defenders: HashSet<(usize, usize)> = HashSet::new();
         for r in 0..NUM_TILES {
@@ -352,43 +374,88 @@ impl Board {
         defenders.is_empty()
     }
 
-    pub fn get_state(&self) -> [u8; NUM_TILES * NUM_TILES] {
-        let mut output = [0; NUM_TILES * NUM_TILES];
-        let mut counter = 0;
-        for row in &self.state {
-            for s in row {
-                match s {
-                    None => {}
-                    Some(p) => match p {
-                        Piece::King(_) => output[counter] = 3,
-                        Piece::Soldier(_) => match p.get_team() {
-                            Attacker => output[counter] = 1,
-                            Defender => output[counter] = 2,
-                        },
-                    },
+    // TODO: This is very memory wasteful, implement a run length encoder
+    pub fn get_state_as_int(&self) -> [[u8; NUM_TILES]; NUM_TILES] {
+        std::array::from_fn(|irow| {
+            std::array::from_fn(|icol| match &self.state[irow][icol] {
+                Some(Piece::King(_)) => 3,
+                Some(piece) if piece.get_team() == Attacker => 1,
+                Some(_) => 2,
+                None => 0,
+            })
+        })
+    }
+
+    pub fn get_board_after_move_piece(
+        &self,
+        row: usize,
+        col: usize,
+        player_row: usize,
+        player_col: usize,
+        player_turn: &Team,
+    ) -> (Board, GameState, Team) {
+        let mut new_board = Board::new(self.get_state_as_int(), None);
+
+        new_board.state[row][col] = new_board.state[player_row][player_col];
+        new_board.state[player_row][player_col] = None;
+
+        // Check if the king is in a special square
+        if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
+            (&new_board.state[row][col], &new_board.board[row][col])
+        {
+            return (new_board, GameState::GameOver, *player_turn);
+        } else {
+            // Check for captures
+            for (r, c) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
+                let new_row = (row as i32) + r;
+                let new_col = (col as i32) + c;
+                if !(new_row >= 0
+                    && new_col >= 0
+                    && new_row < (NUM_TILES as i32)
+                    && new_col < (NUM_TILES as i32))
+                {
+                    continue;
                 }
-                counter += 1;
+                let Some(p) = new_board.state[new_row as usize][new_col as usize] else {
+                    continue;
+                };
+                if p.is_captured(new_row, new_col, &mut new_board, row as i32, col as i32)
+                    == GameState::GameOver
+                {
+                    return (new_board, GameState::GameOver, *player_turn);
+                }
             }
-        }
-        output
+        };
+
+        (
+            new_board,
+            GameState::Playing,
+            match player_turn {
+                Team::Attacker => Team::Defender,
+                Team::Defender => Team::Attacker,
+            },
+        )
     }
 }
 
 impl Default for Board {
     fn default() -> Self {
-        Self::new([
-            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
-            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
-            [1, 1, 0, 2, 2, 3, 2, 2, 0, 1, 1],
-            [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
-            [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
-            [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-            [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
-        ])
+        Self::new(
+            [
+                [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
+                [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
+                [1, 1, 0, 2, 2, 3, 2, 2, 0, 1, 1],
+                [1, 0, 0, 0, 2, 2, 2, 0, 0, 0, 1],
+                [1, 0, 0, 0, 0, 2, 0, 0, 0, 0, 1],
+                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                [0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0],
+            ],
+            None,
+        )
     }
 }
 
@@ -398,36 +465,42 @@ mod tests {
     #[test]
     fn test_has_squares_to_move_to() {
         assert!(
-            !Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
-                [1, 2, 0, 0, 0, 0, 2, 1, 2, 0, 0],
-                [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
+            !Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
+                    [1, 2, 0, 0, 0, 0, 2, 1, 2, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
             .has_possible_moves(&Team::Attacker)
         );
 
         assert!(
-            Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
-                [1, 2, 0, 0, 0, 0, 0, 1, 2, 0, 0],
-                [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
+            Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
+                    [1, 2, 0, 0, 0, 0, 0, 1, 2, 0, 0],
+                    [2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
             .has_possible_moves(&Team::Attacker)
         );
     }
@@ -436,83 +509,101 @@ mod tests {
     fn test_surround() {
         // Single curve surrounded
         assert!(
-            Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
+            Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
             .is_surrounded()
         );
 
         // 2 curves - not single curve surrounded
         assert!(
-            !Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-                [0, 1, 1, 1, 1, 1, 0, 1, 2, 0, 1],
-                [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
-                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
+            !Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 1, 1, 0, 1, 2, 0, 1],
+                    [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+                    [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
             .is_surrounded()
         );
 
         // 1 piece not surrounded
         assert!(
-            !Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-                [0, 1, 1, 1, 1, 1, 0, 0, 2, 0, 1],
-                [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
-                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
+            !Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                    [0, 1, 1, 1, 1, 1, 0, 0, 2, 0, 1],
+                    [0, 1, 0, 0, 0, 1, 0, 1, 1, 1, 1],
+                    [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 2, 3, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
             .is_surrounded()
         );
     }
 
     #[test]
-    fn test_get_state() {
+    fn test_get_state_as_int() {
         // Single curve surrounded
         assert!(
-            Board::new([
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
-                [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
-                [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-            ])
-            .get_state()
+            Board::new(
+                [
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                ],
+                None
+            )
+            .get_state_as_int()
                 == [
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0,
-                    0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0, 0,
-                    1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-                    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 2, 3, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0],
+                    [0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
                 ],
         );
     }
