@@ -1,81 +1,164 @@
-use std::collections::HashMap;
+use std::cell::RefCell;
+use std::collections::{HashMap, HashSet};
+use std::rc::Rc;
+
+type NodeRef = Rc<RefCell<Node>>;
+type TranspositionTable = HashMap<[[u8; NUM_TILES]; NUM_TILES], NodeRef>;
 
 use crate::{
-    board::{Board, Piece, SpecialSquare, Team},
+    board::{Board, Team},
     cons::NUM_TILES,
-    game::GameState,
 };
 struct Tree {
-    root: [u8; NUM_TILES * NUM_TILES],
+    root: [[u8; NUM_TILES]; NUM_TILES],
+    starting_team: Team,
 }
 impl Tree {
-    fn new(root: [u8; NUM_TILES * NUM_TILES]) -> Tree {
-        Tree { root }
-    }
-}
-
-struct Node {
-    N: u128,
-    Q: f64,
-    children: Vec<[u8; NUM_TILES * NUM_TILES]>,
-    is_terminal: bool,
-}
-
-impl Node {
-    fn expansion(&mut self, transposition_table: HashMap<[u8; NUM_TILES * NUM_TILES], Node>) {
-
-        // get possible moves
-        // if possible move is not in list of children
-    }
-}
-
-fn get_board_after_move_piece(
-    board: &Board,
-    row: usize,
-    col: usize,
-    player_row: usize,
-    player_col: usize,
-    player_turn: &Team,
-) -> (Board, GameState, Team) {
-    let mut new_board = Board::new(board.get_state_as_int(), None);
-
-    new_board.state[row][col] = new_board.state[player_row][player_col];
-    new_board.state[player_row][player_col] = None;
-
-    // Check if the king is in a special square
-    if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
-        (&new_board.state[row][col], &new_board.board[row][col])
-    {
-        return (new_board, GameState::GameOver, *player_turn);
-    } else {
-        // Check for captures
-        for (r, c) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
-            let new_row = (row as i32) + r;
-            let new_col = (col as i32) + c;
-            if !(new_row >= 0
-                && new_col >= 0
-                && new_row < (NUM_TILES as i32)
-                && new_col < (NUM_TILES as i32))
-            {
-                continue;
-            }
-            let Some(p) = new_board.state[new_row as usize][new_col as usize] else {
-                continue;
-            };
-            if p.is_captured(new_row, new_col, &mut new_board, row as i32, col as i32)
-                == GameState::GameOver
-            {
-                return (new_board, GameState::GameOver, *player_turn);
-            }
+    fn new(
+        root: [[u8; NUM_TILES]; NUM_TILES],
+        starting_team: Team,
+        transposition_table: &mut TranspositionTable,
+    ) -> Tree {
+        transposition_table.entry(root).or_insert_with(|| {
+            Rc::new(RefCell::new(Node::new(HashSet::new(), root, starting_team)))
+        });
+        Tree {
+            root,
+            starting_team,
         }
-    };
+    }
+}
 
-    (
-        new_board,
-        GameState::Playing,
-        match player_turn {
+fn walk_tree(
+    node_state: [[u8; NUM_TILES]; NUM_TILES],
+    parent_state: Option<[[u8; NUM_TILES]; NUM_TILES]>,
+    team: Team,
+    transposition_table: &mut TranspositionTable,
+) {
+    transposition_table.entry(node_state).or_insert_with(|| {
+        Rc::new(RefCell::new(Node::new(
+            match parent_state {
+                None => HashSet::new(),
+                Some(p) => HashSet::from([p]),
+            },
+            node_state,
+            team,
+        )))
+    });
+
+    // -- Base case: If this is a leaf node, expand and backprob
+    if transposition_table
+        .get(&node_state)
+        .unwrap()
+        .borrow_mut()
+        .expand()
+    {
+        // Clone the Rc — cheap, just increments a reference count
+        let node_rc = Rc::clone(transposition_table.get(&node_state).unwrap());
+        // No borrow on the table is held here, so we can pass &mut transposition_table freely
+        node_rc.borrow_mut().backpropagate(transposition_table);
+        return;
+    }
+    // -- Select a node
+    fn ucb1(node: &Node, parent_n: f32) -> f32 {
+        node.v + 2.0 * (parent_n.ln() / node.n).sqrt()
+    }
+    let children: Vec<_> = transposition_table
+        .get(&node_state)
+        .unwrap()
+        .borrow()
+        .children
+        .iter()
+        .cloned()
+        .collect(); // borrow released here
+
+    let max_child = children
+        .iter()
+        .max_by(|a, b| {
+            let node_n = transposition_table.get(&node_state).unwrap().borrow().n;
+            let a_score = ucb1(
+                &transposition_table.get(a.clone()).unwrap().borrow(),
+                node_n,
+            );
+            let b_score = ucb1(
+                &transposition_table.get(b.clone()).unwrap().borrow(),
+                node_n,
+            );
+            a_score.partial_cmp(&b_score).unwrap()
+        })
+        .copied()
+        .unwrap();
+
+    // -- Call function recursively, keep going deeper
+    walk_tree(
+        transposition_table.get(&max_child).unwrap().get_mut().state,
+        parent_state,
+        match team {
             Team::Attacker => Team::Defender,
             Team::Defender => Team::Attacker,
         },
-    )
+        transposition_table,
+    );
+}
+
+struct Node {
+    n: f32,
+    v: f32,
+    children: HashSet<[[u8; NUM_TILES]; NUM_TILES]>,
+    parents: HashSet<[[u8; NUM_TILES]; NUM_TILES]>,
+    is_terminal: bool,
+    team: Team,
+    state: [[u8; NUM_TILES]; NUM_TILES],
+}
+
+impl Node {
+    fn new(
+        parents: HashSet<[[u8; NUM_TILES]; NUM_TILES]>,
+        state: [[u8; NUM_TILES]; NUM_TILES],
+        team: Team,
+    ) -> Node {
+        Node {
+            n: 0.,
+            v: 0.,
+            children: HashSet::new(),
+            parents,
+            is_terminal: true,
+            team,
+            state,
+        }
+    }
+    fn expand(&mut self) -> bool {
+        // Originally, you would not expand all nodes. But I don't want to perform this computation
+        // over and over again
+        if self.children.is_empty() {
+            self.children.extend(
+                Board::new(self.state, None)
+                    .get_possible_moves(&self.team)
+                    .iter()
+                    .map(|m| m.get_state_as_int()),
+            );
+            return true;
+        }
+        false
+    }
+    fn backpropagate(&mut self, transposition_table: &mut TranspositionTable) -> f32 {
+        todo!()
+        // if self.is_terminal {
+        //     let (is_terminal, value) = self.get_value_of_board();
+        //
+        //     // set terminal state
+        //     transposition_table
+        //         .get_mut(&self.state)
+        //         .unwrap()
+        //         .is_terminal = is_terminal;
+        //
+        //     return value;
+        // }
+        // value
+    }
+
+    fn get_value_of_board(&self) -> (bool, f32) {
+        // TODO: Actually implement this function
+        (false, 1.0) // is terminal, value
+    }
 }
