@@ -1,6 +1,7 @@
 use crate::{
     board::{Board, Team},
     cons::NUM_TILES,
+    game::GameState,
 };
 use std::collections::{HashMap, HashSet};
 
@@ -13,6 +14,7 @@ type TranspositionTable = HashMap<[[u8; NUM_TILES]; NUM_TILES], Node>;
 
 #[derive(Clone)]
 enum TerminalState {
+    Unknown,
     NotTerminal,
     Terminal(Team),
 }
@@ -55,14 +57,29 @@ fn walk_tree(
     });
 
     // -- Base cases
-
-    //-- TODO: Check if this is a terminal node, i.e. if this is a winning position, if so, backpropagate and return
+    match transposition_table.get(&node_state).unwrap().terminal_state {
+        TerminalState::NotTerminal => {}
+        TerminalState::Terminal(t) => {
+            todo!("backpropagate and return")
+        }
+        TerminalState::Unknown => {
+            let (_, game_state, _) =
+                Board::new(node_state, None).get_board_after_move_piece(0, 0, 0, 0, &team);
+            if let GameState::GameOver = game_state {
+                transposition_table
+                    .get_mut(&node_state)
+                    .unwrap()
+                    .terminal_state = TerminalState::Terminal(team.clone());
+                todo!("backpropagate and return")
+            }
+        }
+    }
 
     // -- If this node has not been visited, then rollout, backpropagate, and return
     let node = transposition_table.get(&node_state).unwrap();
     if node.n == 0.0 {
         let winning_team = node.rollout();
-        // TODO: backpropagate
+        todo!("backpropagate and return")
     }
 
     // -- Expand
@@ -121,7 +138,7 @@ impl Node {
             v: 0.,
             children: HashSet::new(),
             parents,
-            terminal_state: TerminalState::NotTerminal,
+            terminal_state: TerminalState::Unknown,
             team,
             state,
         }
@@ -159,7 +176,7 @@ impl Node {
             );
         }
         match node.terminal_state {
-            TerminalState::NotTerminal => {
+            TerminalState::NotTerminal | TerminalState::Unknown => {
                 panic!("Terminal state not reached with a winner. This should never happen")
             }
             TerminalState::Terminal(t) => t,

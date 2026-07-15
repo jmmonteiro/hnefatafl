@@ -323,15 +323,15 @@ impl Board {
         possible_moves
     }
 
-    fn get_board_after_move_piece(
-        board: &Board,
+    pub fn get_board_after_move_piece(
+        &self,
         row: usize,
         col: usize,
         player_row: usize,
         player_col: usize,
         player_turn: &Team,
     ) -> (Board, GameState, Team) {
-        let mut new_board = Board::new(board.get_state_as_int(), None);
+        let mut new_board = Board::new(self.get_state_as_int(), None);
 
         new_board.state[row][col] = new_board.state[player_row][player_col];
         new_board.state[player_row][player_col] = None;
@@ -341,7 +341,7 @@ impl Board {
             (&new_board.state[row][col], &new_board.board[row][col])
         {
             return (new_board, GameState::GameOver, Team::Defender);
-        } else if board.is_surrounded() {
+        } else if new_board.is_surrounded() {
             return (new_board, GameState::GameOver, Team::Attacker);
         } else {
             // Check for captures
