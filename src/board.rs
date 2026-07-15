@@ -340,7 +340,9 @@ impl Board {
         if let (Some(Piece::King(_)), Some(SpecialSquare::Escape)) =
             (&new_board.state[row][col], &new_board.board[row][col])
         {
-            return (new_board, GameState::GameOver, *player_turn);
+            return (new_board, GameState::GameOver, Team::Defender);
+        } else if board.is_surrounded() {
+            return (new_board, GameState::GameOver, Team::Attacker);
         } else {
             // Check for captures
             for (r, c) in [(-1, 0), (1, 0), (0, -1), (0, 1)] {
@@ -359,7 +361,7 @@ impl Board {
                 if p.is_captured(new_row, new_col, &mut new_board, row as i32, col as i32)
                     == GameState::GameOver
                 {
-                    return (new_board, GameState::GameOver, *player_turn);
+                    return (new_board, GameState::GameOver, Team::Attacker);
                 }
             }
         };
@@ -428,7 +430,7 @@ impl Board {
         defenders.is_empty()
     }
 
-    // TODO: This is very memory wasteful, implement a run length encoder
+    // TODO: This is very memory wasteful, implement Zobrist hashing instead
     pub fn get_state_as_int(&self) -> [[u8; NUM_TILES]; NUM_TILES] {
         std::array::from_fn(|irow| {
             std::array::from_fn(|icol| match &self.state[irow][icol] {
