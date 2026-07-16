@@ -13,3 +13,11 @@ opt-level = "z"   # Optimize for size.
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[profile.release-wasm]
+inherits = "release"
+strip = false        # Don't strip — wasm doesn't need this
+opt-level = "z"
+lto = false          # Must be off for macroquad wasm
+codegen-units = 1
+panic = "abort"      # wasm32 already defaults to this, but fine to keep
