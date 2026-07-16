@@ -3,7 +3,10 @@ use crate::{
     cons::NUM_TILES,
     game::GameState,
 };
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    panic::panic_any,
+};
 
 use rand::SeedableRng;
 use rand::rngs::StdRng;
@@ -35,6 +38,30 @@ impl Tree {
         Tree {
             root,
             starting_team,
+        }
+    }
+}
+
+fn backpropagate(
+    start_node: &[[u8; NUM_TILES]; NUM_TILES],
+    transposition_table: &mut TranspositionTable,
+) {
+    let mut node = transposition_table.get(start_node).unwrap();
+
+    let value = match node.terminal_state {
+        TerminalState::Unknown | TerminalState::NotTerminal => {
+            panic!("This shold never happen")
+        }
+        TerminalState::Terminal(t) => match t {
+            Team::Attacker => 1.0,
+            Team::Defender => 0.0,
+        },
+    };
+
+    loop {
+        // Reached the root
+        if node.parents.is_empty() {
+            break;
         }
     }
 }
