@@ -1,7 +1,10 @@
-use crate::cons::TILE_SIZE;
+use crate::cons::{NUM_TILES, TILE_MARGIN_SCALE_FACTOR};
+use macroquad::prelude::*;
+
 pub fn xy2rowcol(x: f32, y: f32) -> (usize, usize) {
+    let tile_size = screen_width().min(screen_height()) / (NUM_TILES as f32);
     (
-        (y / (TILE_SIZE + 1.)) as usize,
-        (x / (TILE_SIZE + 1.)) as usize,
+        (y / (tile_size / TILE_MARGIN_SCALE_FACTOR + 1.)) as usize,
+        (x / (tile_size / TILE_MARGIN_SCALE_FACTOR + 1.)) as usize,
     )
 }

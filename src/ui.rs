@@ -4,26 +4,17 @@ use macroquad::prelude::*;
 use macroquad::ui::{Skin, hash, root_ui};
 
 pub fn get_menu(game_state: &mut GameState) {
+    let screen_size = screen_width().min(screen_height());
+
     if *game_state != GameState::Menu {
         return;
     }
-    let window_size = vec2(370.0, 320.0);
-    let window_style = root_ui()
-        .style_builder()
-        //.background(window_background)
-        .background_margin(RectOffset::new(32.0, 76.0, 44.0, 20.0))
-        .margin(RectOffset::new(0.0, -40.0, 0.0, 0.0))
-        .build();
+    let window_size = vec2(0.5 * screen_size, 0.5 * screen_size);
+    let window_style = root_ui().style_builder().build();
     let button_style = root_ui()
         .style_builder()
-        //        .background(button_background)
-        //       .background_clicked(button_clicked_background)
-        .background_margin(RectOffset::new(16.0, 16.0, 16.0, 16.0))
-        .margin(RectOffset::new(16.0, 0.0, -8.0, -8.0))
-        //      .font(&font)
-        //.unwrap()
         .text_color(BLACK)
-        .font_size(64)
+        .font_size((screen_size / 10.) as u16)
         .build();
     let ui_skin = Skin {
         window_style,
