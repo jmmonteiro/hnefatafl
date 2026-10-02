@@ -26,8 +26,8 @@ pub fn get_menu(game_state: &mut GameState) {
     root_ui().window(
         hash!(),
         vec2(
-            screen_size / 2.0 - window_size.x / 2.0,
-            screen_size / 2.0 - window_size.y / 2.0,
+            screen_width() / 2.0 - window_size.x / 2.0,
+            screen_height() / 2.0 - window_size.y / 2.0,
         ),
         window_size,
         |ui| {
@@ -39,6 +39,8 @@ pub fn get_menu(game_state: &mut GameState) {
             }
         },
     );
+
+    root_ui().pop_skin();
 }
 
 pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
@@ -48,13 +50,13 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
     let button_style = root_ui()
         .style_builder()
         .text_color(BLACK)
-        .font_size((screen_size / 10.) as u16)
+        .font_size((screen_size / 15.) as u16)
         .build();
 
     let label_style = root_ui()
         .style_builder()
         .text_color(BLACK)
-        .font_size((screen_size / 10.) as u16)
+        .font_size((screen_size / 20.) as u16)
         .build();
     let ui_skin = Skin {
         window_style,
@@ -67,19 +69,21 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
     root_ui().window(
         hash!(),
         vec2(
-            screen_width() / 2.0 - window_size.x / 2.0,
-            screen_height() / 2.0 - window_size.y / 2.0,
+            screen_size / 2.0 - window_size.x / 2.0,
+            screen_size / 2.0 - window_size.y / 2.0,
         ),
         window_size,
         |ui| {
-            ui.label(vec2(40.0, 0.0), message);
-            if ui.button(vec2(15.0, 75.0), "Play Again?") {
+            ui.label(vec2(screen_size * 0.1, screen_size * 0.1), message);
+            if ui.button(vec2(screen_size * 0.1, screen_size * 0.2), "Play Again?") {
                 *game_state = GameState::Playing;
                 *board = Board::default();
             }
-            if ui.button(vec2(100.0, 155.0), "Quit") {
+            if ui.button(vec2(screen_size * 0.1, screen_size * 0.3), "Quit") {
                 std::process::exit(0);
             }
         },
     );
+
+    root_ui().pop_skin();
 }
