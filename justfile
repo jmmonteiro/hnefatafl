@@ -7,8 +7,7 @@ release:
 
 wasm:
  cargo build --profile release-wasm --target wasm32-unknown-unknown
- rm wasm/hnefatafl.wasm || True
+ rm wasm/hnefatafl.wasm || true
  mv -f target/wasm32-unknown-unknown/release-wasm/hnefatafl.wasm wasm/
- cd wasm/ && zip -r hnefatafl.zip index.html hnefatafl.wasm
 
 
