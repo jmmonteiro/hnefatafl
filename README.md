@@ -6,4 +6,4 @@ For the curious, the algorithm used for the surround rule is explained in [this 
 
 ## Instructions
 
-Either run 'cargo run --release` to play on your computer, or build the wasm version using the commands in the `justfile`.
+Either run `cargo run --release` to play on your computer, or build the wasm version using the commands in the `justfile`.
