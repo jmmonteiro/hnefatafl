@@ -30,14 +30,6 @@ fn window_conf() -> macroquad::conf::Conf {
     }
 }
 
-fn enforce_square_window() {
-    let (w, h) = (screen_width(), screen_height());
-    if (w - h).abs() > 0.5 {
-        let side = w.min(h);
-        request_new_screen_size(side, side);
-    }
-}
-
 #[macroquad::main(window_conf)]
 async fn main() {
     let mut player_turn = Team::Attacker;
@@ -67,7 +59,6 @@ async fn main() {
                 game_over(&mut game_state, &mut board, &message);
             }
         }
-        enforce_square_window();
         next_frame().await
     }
 }

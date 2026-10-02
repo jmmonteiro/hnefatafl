@@ -275,7 +275,7 @@ impl Board {
                     }
                     Some(Piece::Soldier(s)) => match s.team {
                         Team::Attacker => {
-                            draw_piece(x, y, RED, tile_size);
+                            draw_piece(x, y, BLACK, tile_size);
                         }
                         Team::Defender => {
                             draw_piece(x, y, WHITE, tile_size);
