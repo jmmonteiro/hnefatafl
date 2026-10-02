@@ -1,24 +1,30 @@
 use crate::board::Board;
 use crate::game::GameState;
 use macroquad::prelude::*;
-use macroquad::ui::{Skin, hash, root_ui};
+use macroquad::ui::{Skin, Style, hash, root_ui};
+
+fn get_screen_window_style() -> (f32, Vec2, Style) {
+    let screen_size = screen_width().min(screen_height());
+    (
+        screen_size,
+        vec2(0.5 * screen_size, 0.5 * screen_size),
+        root_ui()
+            .style_builder()
+            .text_color(BLACK)
+            .font_size((screen_size / 10.) as u16)
+            .build(),
+    )
+}
 
 pub fn get_menu(game_state: &mut GameState) {
-    let screen_size = screen_width().min(screen_height());
+    let (screen_size, window_size, style) = get_screen_window_style();
 
     if *game_state != GameState::Menu {
         return;
     }
-    let window_size = vec2(0.5 * screen_size, 0.5 * screen_size);
-    let window_style = root_ui().style_builder().build();
-    let button_style = root_ui()
-        .style_builder()
-        .text_color(BLACK)
-        .font_size((screen_size / 10.) as u16)
-        .build();
     let ui_skin = Skin {
-        window_style,
-        button_style,
+        window_style: root_ui().style_builder().build(),
+        button_style: style,
         ..root_ui().default_skin()
     };
     root_ui().push_skin(&ui_skin);
@@ -26,15 +32,15 @@ pub fn get_menu(game_state: &mut GameState) {
     root_ui().window(
         hash!(),
         vec2(
-            screen_width() / 2.0 - window_size.x / 2.0,
-            screen_height() / 2.0 - window_size.y / 2.0,
+            screen_size / 2.0 - window_size.x / 2.0,
+            screen_size / 2.0 - window_size.y / 2.0,
         ),
         window_size,
         |ui| {
-            if ui.button(vec2(65.0, 25.0), "Play") {
+            if ui.button(vec2(screen_size * 0.15, screen_size * 0.1), "Play") {
                 *game_state = GameState::Playing;
             }
-            if ui.button(vec2(65.0, 125.0), "Quit") {
+            if ui.button(vec2(screen_size * 0.15, screen_size * 0.3), "Quit") {
                 std::process::exit(0);
             }
         },
@@ -42,40 +48,12 @@ pub fn get_menu(game_state: &mut GameState) {
 }
 
 pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
-    let window_size = vec2(370.0, 320.0);
-    let window_style = root_ui()
-        .style_builder()
-        //.background(window_background)
-        .background_margin(RectOffset::new(0.0, 76.0, 44.0, 20.0))
-        .margin(RectOffset::new(0.0, -40.0, 0.0, 0.0))
-        .build();
-    let button_style = root_ui()
-        .style_builder()
-        //        .background(button_background)
-        //       .background_clicked(button_clicked_background)
-        .background_margin(RectOffset::new(16.0, 16.0, 16.0, 16.0))
-        .margin(RectOffset::new(16.0, 0.0, -8.0, -8.0))
-        //      .font(&font)
-        //.unwrap()
-        .text_color(BLACK)
-        .font_size(64)
-        .build();
+    let (screen_size, window_size, style) = get_screen_window_style();
 
-    let label_style = root_ui()
-        .style_builder()
-        //        .background(button_background)
-        //       .background_clicked(button_clicked_background)
-        .background_margin(RectOffset::new(16.0, 16.0, 16.0, 16.0))
-        .margin(RectOffset::new(16.0, 0.0, -8.0, -8.0))
-        //      .font(&font)
-        //.unwrap()
-        .text_color(BLACK)
-        .font_size(40)
-        .build();
     let ui_skin = Skin {
-        window_style,
-        button_style,
-        label_style,
+        window_style: root_ui().style_builder().build(),
+        button_style: style.clone(),
+        label_style: style,
         ..root_ui().default_skin()
     };
     root_ui().push_skin(&ui_skin);
@@ -83,8 +61,8 @@ pub fn game_over(game_state: &mut GameState, board: &mut Board, message: &str) {
     root_ui().window(
         hash!(),
         vec2(
-            screen_width() / 2.0 - window_size.x / 2.0,
-            screen_height() / 2.0 - window_size.y / 2.0,
+            screen_size / 2.0 - window_size.x / 2.0,
+            screen_size / 2.0 - window_size.y / 2.0,
         ),
         window_size,
         |ui| {
