@@ -1,6 +1,6 @@
 # Hnefatafl
 
-[Hnefatafl] game following the [Fetlar rules](https://aagenielsen.dk/fetlar_rules_en.php).
+[Hnefatafl](https://en.wikipedia.org/wiki/Tafl_games) game following the [Fetlar rules](https://aagenielsen.dk/fetlar_rules_en.php).
 
 For the curious, the algorithm used for the surround rule is explained in [this blog post](https://jmmonteiro.com/blog/2026-05-09/).
 
