@@ -4,21 +4,20 @@
 use std::collections::HashSet;
 
 use hnefatafl::board::{Board, Team};
-use hnefatafl::cons::{NUM_TILES, TILE_SIZE};
 use hnefatafl::game::{GameState, game_loop};
 use hnefatafl::ui::{game_over, get_menu};
 use macroquad::conf::UpdateTrigger;
 use macroquad::prelude::*;
 
 fn window_conf() -> macroquad::conf::Conf {
-    let window_size = (TILE_SIZE as i32) * (NUM_TILES as i32) + (NUM_TILES as i32);
+    let window_size = 500;
     macroquad::conf::Conf {
         miniquad_conf: Conf {
             window_title: "Hnefatafl".to_owned(),
             fullscreen: false,
             window_width: window_size,
             window_height: window_size,
-            window_resizable: false,
+            window_resizable: true,
             ..Default::default()
         },
         update_on: Some(UpdateTrigger {
@@ -28,6 +27,14 @@ fn window_conf() -> macroquad::conf::Conf {
             ..Default::default()
         }),
         ..Default::default()
+    }
+}
+
+fn enforce_square_window() {
+    let (w, h) = (screen_width(), screen_height());
+    if (w - h).abs() > 0.5 {
+        let side = w.min(h);
+        request_new_screen_size(side, side);
     }
 }
 
@@ -60,7 +67,7 @@ async fn main() {
                 game_over(&mut game_state, &mut board, &message);
             }
         }
-
+        enforce_square_window();
         next_frame().await
     }
 }

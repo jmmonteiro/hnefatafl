@@ -1,7 +1,7 @@
 use macroquad::prelude::*;
 use std::collections::{HashSet, VecDeque};
 
-use crate::cons::{NUM_TILES, TILE_SIZE};
+use crate::cons::{NUM_TILES, TILE_MARGIN_SCALE_FACTOR};
 use crate::game::GameState;
 
 pub enum SpecialSquare {
@@ -221,29 +221,32 @@ impl Board {
     }
 
     pub fn draw(&self, legal_moves: &HashSet<(usize, usize)>) {
-        fn rowcol2xy(row: usize, col: usize) -> (f32, f32) {
+        let tile_size =
+            screen_width().min(screen_height()) / (TILE_MARGIN_SCALE_FACTOR * NUM_TILES as f32);
+
+        fn rowcol2xy(row: usize, col: usize, tile_size: f32) -> (f32, f32) {
             (
-                (col as f32) * (TILE_SIZE + 1.),
-                (row as f32) * (TILE_SIZE + 1.),
+                (col as f32) * (tile_size + 1.),
+                (row as f32) * (tile_size + 1.),
             )
         }
-        fn draw_piece(x: f32, y: f32, color: Color) {
+        fn draw_piece(x: f32, y: f32, color: Color, tile_size: f32) {
             draw_circle(
-                x + (TILE_SIZE + 1.) / 2.0,
-                y + (TILE_SIZE + 1.) / 2.0,
-                TILE_SIZE / 3.,
+                x + (tile_size + 1.) / 2.0,
+                y + (tile_size + 1.) / 2.0,
+                tile_size / 3.,
                 color,
             );
         }
 
         (0..NUM_TILES).for_each(|r| {
             (0..NUM_TILES).for_each(|c| {
-                let (x, y) = rowcol2xy(r, c);
+                let (x, y) = rowcol2xy(r, c, tile_size);
                 draw_rectangle(
                     x,
                     y,
-                    TILE_SIZE,
-                    TILE_SIZE,
+                    tile_size,
+                    tile_size,
                     if self.board[r][c].is_some() {
                         BROWN
                     } else {
@@ -251,31 +254,31 @@ impl Board {
                     },
                 );
                 match self.selected_square {
-                    Some(s) if s == (r, c) => draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, GOLD),
+                    Some(s) if s == (r, c) => draw_rectangle(x, y, tile_size, tile_size, GOLD),
                     _ => {}
                 }
                 for (r, c) in legal_moves {
-                    let (x, y) = rowcol2xy(*r, *c);
-                    draw_rectangle(x, y, TILE_SIZE, TILE_SIZE, LIME);
+                    let (x, y) = rowcol2xy(*r, *c, tile_size);
+                    draw_rectangle(x, y, tile_size, tile_size, LIME);
                 }
                 match &self.state[r][c] {
                     None => {}
                     Some(Piece::King(_)) => {
                         draw_poly(
-                            x + (TILE_SIZE + 1.) / 2.,
-                            y + (TILE_SIZE + 1.) / 2.,
+                            x + (tile_size + 1.) / 2.,
+                            y + (tile_size + 1.) / 2.,
                             4,
-                            TILE_SIZE / 2.3,
+                            tile_size / 2.3,
                             90.,
                             WHITE,
                         );
                     }
                     Some(Piece::Soldier(s)) => match s.team {
                         Team::Attacker => {
-                            draw_piece(x, y, RED);
+                            draw_piece(x, y, RED, tile_size);
                         }
                         Team::Defender => {
-                            draw_piece(x, y, WHITE);
+                            draw_piece(x, y, WHITE, tile_size);
                         }
                     },
                 }
