@@ -99,7 +99,9 @@ pub fn game_loop(
                     legal_moves.clear();
                 } else {
                     // Select new square
-                    if let Some(p) = board.state[row][col] {
+                    if let Some(p) = board.state[row][col]
+                        && p.get_team() == *player_turn
+                    {
                         board.selected_square = Some((row, col));
                         *legal_moves = p.get_legal_moves(row, col, board);
                     }
